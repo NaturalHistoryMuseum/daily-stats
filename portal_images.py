@@ -2,39 +2,23 @@ import requests
 from datetime import date
 import gbif_dbtools as db
 
-# Get no. of images in specimen collection
-query_image_count = {
-    "resource_id": "05ff2255-c38a-40c9-b657-4ccb55ab2feb",
-    "raw_result": True,
-    "search": {
-        "size": 0,
-        "aggs": {"media_count": {"sum": {"field": "data.associatedMediaCount.number"}}}
-    }
-}
-
 today = date.today()
 
-r = requests.post('https://data.nhm.ac.uk/api/3/action/datastore_search_raw', json=query_image_count)
-result_image_count = r.json()['result']['aggregations']['media_count']['value']
+resource_id = "05ff2255-c38a-40c9-b657-4ccb55ab2feb"
+action_url = "https://data.nhm.ac.uk/api/3/action/vds_multi_stats"
+field = "associatedMediaCount"
 
-# Get no. specimens with at least one image attached
-query_specimens_imaged = {
-    "resource_id": "05ff2255-c38a-40c9-b657-4ccb55ab2feb",
-    "raw_result": True,
-    "search": {
-        "size": 0,
-        "query": {
-            "exists": {"field": "data.associatedMedia"}
-        }
-    }
-}
+r = requests.get(f"{action_url}?resource_ids={resource_id}&field={field}")
+result = r.json()["result"]
+# the number of images in the specimen collection
+image_count = result["sum"]
+# the number of specimens with images
+imaged_count = result["count"]
 
-r2 = requests.post('https://data.nhm.ac.uk/api/3/action/datastore_search_raw', json=query_specimens_imaged)
-result_imaged_specimens = r2.json()['result']['hits']['total']
-
-# Insert into dashboard.specimen_images
-sql = f"INSERT INTO specimen_images (date, image_count, imaged_specimens, resource_id) VALUES ('{today}', " \
-    f"{result_image_count}, {result_imaged_specimens}, " \
-    f"'05ff2255-c38a-40c9-b657-4ccb55ab2feb')"
+# insert into dashboard.specimen_images
+sql = f"""
+INSERT INTO specimen_images (date, image_count, imaged_specimens, resource_id)
+VALUES ('{today}', {image_count}, {imaged_count}, '{resource_id})')
+"""
 
 db.query_db(sql)
