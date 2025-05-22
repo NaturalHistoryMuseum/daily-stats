@@ -13,7 +13,7 @@ result = r.json()["result"]
 # the number of images in the specimen collection
 image_count = result["sum"]
 # the number of specimens with images
-imaged_count = result["sum"]
+imaged_count = result["count"]
 
 # insert into dashboard.specimen_images
 sql = f"""
