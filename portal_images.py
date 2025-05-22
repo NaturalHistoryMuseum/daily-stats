@@ -11,9 +11,9 @@ field = "associatedMediaCount"
 r = requests.get(f"{action_url}?resource_ids={resource_id}&field={field}")
 result = r.json()["result"]
 # the number of images in the specimen collection
-image_count = result["sum"]
+image_count = int(result["sum"])
 # the number of specimens with images
-imaged_count = result["count"]
+imaged_count = int(result["count"])
 
 # insert into dashboard.specimen_images
 sql = f"""
@@ -21,4 +21,5 @@ INSERT INTO specimen_images (date, image_count, imaged_specimens, resource_id)
 VALUES ('{today}', {image_count}, {imaged_count}, '{resource_id})')
 """
 
-db.query_db(sql)
+print(sql)
+# db.query_db(sql)
