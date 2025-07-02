@@ -23,6 +23,7 @@ def get_list():
 
             # Only keep results with an id
             works.extend([result for result in results if 'id' in result])
+            print(f"works: {len(works)}")
 
             if r.json()['endOfRecords']:
                 break
@@ -30,6 +31,7 @@ def get_list():
     except requests.exceptions.HTTPError as e:
         print(e)
 
+    print(f"found all works: {len(works)}")
     map_fields(works)
 
 
@@ -100,10 +102,12 @@ def triage_citations(works):
     # Keys and records on database
     existing_citations = db.query_db("SELECT id, update_date FROM gbif_citations;").fetchall()
     existing_citation_ids = set([c[0] for c in existing_citations])
+    print(f"found {len(existing_citation_ids)} existing citations")
     # Anything in the db but not the API needs deleting from the db
     citation_ids_to_delete = list(existing_citation_ids - api_citation_ids)
     # Anything in the api and not the db needs adding to the db
     citation_ids_to_add = list(api_citation_ids - existing_citation_ids)
+    print(f"going to add {len(citation_ids_to_add)} citations")
     # Anything in both needs to be checked for latest update
     common_citation_ids = existing_citation_ids & api_citation_ids
 
@@ -167,7 +171,8 @@ def add_citations(new_citations):
 
     # Call occurrence script here: should take new_citations and return a list of the same record with total
     # publisher count, total record count, nhm record count fields added and populated
-    for record in new_citations:
+    for xi, record in enumerate(new_citations):
+        print(f"Handling {xi} of {len(new_citations)}")
         if record['gbif_dk_list']:
             record = go.assemble_parts(record)
 
