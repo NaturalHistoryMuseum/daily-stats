@@ -2,6 +2,7 @@
 apikeys.txt
 alma-key.txt
 msq-permissions.txt
+certs
 
 venv
 .venv
