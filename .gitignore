@@ -2,6 +2,9 @@
 apikeys.txt
 alma-key.txt
 msq-permissions.txt
-# server ignores
+
 venv
+.venv
 logs
+.idea
+__pycache__
