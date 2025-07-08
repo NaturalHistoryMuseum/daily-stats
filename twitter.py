@@ -13,7 +13,7 @@ def get_followers():
     api = tweepy.API(auth)
 
     # Get today's follower count for @NHM_Digitise
-    follower_count = api.get_user('NHM_Digitise').followers_count
+    follower_count = api.get_user(user_id='NHM_Digitise').followers_count
 
     # Get runtime + date
     today_dt = datetime.datetime.today().date()
