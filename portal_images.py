@@ -18,7 +18,7 @@ imaged_count = int(result["count"])
 # insert into dashboard.specimen_images
 sql = f"""
 INSERT INTO specimen_images (date, image_count, imaged_specimens, resource_id)
-VALUES ('{today}', {image_count}, {imaged_count}, '{resource_id})')
+VALUES ('{today}', {image_count}, {imaged_count}, '{resource_id}')
 """
 
 db.query_db(sql)
