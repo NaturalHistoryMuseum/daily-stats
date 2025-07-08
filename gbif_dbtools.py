@@ -24,7 +24,7 @@ def query_db(sql):
             ssl_cert=args[7],
         )
     else:
-        print('Permissions file must have 5 or 7 args specified')
+        print('Permissions file must have 4 or 8 args specified')
         exit(1)
 
     with db:
