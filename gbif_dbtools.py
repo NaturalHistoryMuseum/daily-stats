@@ -7,8 +7,27 @@ def query_db(sql):
     :param sql: String script to run
     :return: Cursor
     """
-    host, user, password, database = get_keys('msq-permissions.txt')
-    with pymysql.connect(host=host, user=user, password=password, db=database) as db:
+    args = get_keys('msq-permissions.txt')
+    if len(args) == 4:
+        # old style permissions format with host, user, password, db
+        db = pymysql.connect(host=args[0], user=args[1], password=args[2], db=args[3])
+    elif len(args) == 8:
+        # new style permissions with addition of port and ssl config
+        db = pymysql.connect(
+            host=args[0],
+            port=int(args[1]),
+            user=args[2],
+            password=args[3],
+            db=args[4],
+            ssl_ca=args[5],
+            ssl_key=args[6],
+            ssl_cert=args[7],
+        )
+    else:
+        print('Permissions file must have 5 or 7 args specified')
+        exit(1)
+
+    with db:
         cursor = db.cursor()
         try:
             cursor.execute(sql)
