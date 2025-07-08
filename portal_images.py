@@ -21,5 +21,4 @@ INSERT INTO specimen_images (date, image_count, imaged_specimens, resource_id)
 VALUES ('{today}', {image_count}, {imaged_count}, '{resource_id})')
 """
 
-print(sql)
-# db.query_db(sql)
+db.query_db(sql)
