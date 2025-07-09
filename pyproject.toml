@@ -24,11 +24,15 @@ dependencies = [
     "xmltodict==0.14.2",
     # force up to date certificates to be used
     "certifi==2025.6.15",
+    "click<8.2.0",
 ]
 
 [project.urls]
 repository = "https://github.com/NaturalHistoryMuseum/daily-stats"
 changelog = "https://github.com/NaturalHistoryMuseum/daily-stats/blob/main/CHANGELOG.md"
+
+[project.scripts]
+daily-stats = "daily_stats.cli:cli"
 
 
 [build-system]
