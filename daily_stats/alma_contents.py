@@ -1,12 +1,19 @@
 import datetime
-import xmltodict
-import gbif_dbtools as db
+import urllib.parse
+
 import pandas as pd
 import requests
+import xmltodict
+from sqlalchemy.orm import Session
+
+from daily_stats.config import Config
+from daily_stats.db import AlmaCsfPackageComp, get_engine
 
 
-# Maps library names to special/modern collections - could be done better (via dict? easier to update in the future..)
 def translate_library(row):
+    """
+    Map library names to special/modern collections.
+    """
     if row['Column2'] == 'PAL-ARTHRO':
         row['library_code'] = 'modern-collections'
     elif 'MSS' in row['Column2'] or 'SC' in row['Column2'] or 'ART' in row['Column2']:
@@ -18,42 +25,56 @@ def translate_library(row):
     return row
 
 
-def main():
-    token = db.get_keys('alma-key.txt').pop()
-    url = f"https://api-eu.hosted.exlibrisgroup.com/almaws/v1/analytics/reports?&path=/shared/" \
-          f"Natural%20History%20Museum%20UK%20(NHM)/Reports/JTD/ItemCount&limit=1000" \
-          f"&apikey={token}"
+def get_alma_data(config: Config):
+    """
+    Retrieve data from the ExLibris Alma API, summarise, and insert it into the
+    stats database.
+    """
+    url = 'https://api-eu.hosted.exlibrisgroup.com/almaws/v1/analytics/reports'
+    params = {
+        'path': '/shared/Natural History Museum UK (NHM)/Reports/JTD/ItemCount',
+        'limit': 1000,
+        'apikey': config.alma_token,
+    }
 
     # Query API and flatten result
-    r = requests.get(url)
+    r = requests.get(url, params=urllib.parse.urlencode(params, safe='/'))
     doc = xmltodict.parse(r.text)
 
     # Navigate past all the headers etc to get to the row-level data
     row_data = doc['report']['QueryResult']['ResultXml']['rowset']['Row']
     mapped_row_data = [translate_library(b) for b in row_data]
 
-    # rundate
-    harvest_date = datetime.date.today().strftime("%Y-%m-%d")
-    insert_parameters = []
+    # Today's date
+    harvest_date = datetime.date.today()
 
-    # Get values for each row
-    for row in mapped_row_data:
-        insert_parameters.append((row['Column1'], row['library_code'], harvest_date, int(row['Column3'])))
+    # Get summary for each type of collection/bib level combo (was 600 rows per day
+    # otherwise and unnecessary)
+    df = (
+        pd.DataFrame.from_records(
+            [
+                {
+                    'bib_level': row['Column1'],
+                    'collection': row['library_code'],
+                    'date': harvest_date,
+                    'record_count': int(row['Column3']),
+                }
+                for row in mapped_row_data
+            ]
+        )
+        .groupby(['bib_level', 'collection', 'date'])
+        .sum()
+        .reset_index()
+    )
 
-    # Get summary for each type of collection/bib level combo (was 600 rows per day otherwise and unnecessary)
-    df = pd.DataFrame(insert_parameters, columns=['bib_level', 'collection', 'harvest_date', 'record_count']) \
-        .groupby(['bib_level', 'collection', 'harvest_date']).sum()
-    df.reset_index(inplace=True)
+    engine = get_engine(config)
 
-    # Change the dataframe back to tuples
-    insert_parameters = list(df.itertuples(index=False, name=None))
-
-    sql = f"INSERT INTO alma_csf_package_comp (bib_level, collection, date, record_count) " \
-          f"VALUES (%s, %s, %s, %s)"
-
-    cursor = db.update_db(sql, insert_parameters)
-    cursor.close()
+    with Session(engine) as session:
+        records = [AlmaCsfPackageComp(**r) for r in df.to_dict(orient='records')]
+        session.add_all(records)
+        session.commit()
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    conf = Config()
+    get_alma_data(conf)
