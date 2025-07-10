@@ -25,6 +25,8 @@ dependencies = [
     # force up to date certificates to be used
     "certifi==2025.6.15",
     "click<8.2.0",
+    "python-dotenv>=1.0.1",
+    "sqlalchemy>=2.0.41",
 ]
 
 [project.urls]
