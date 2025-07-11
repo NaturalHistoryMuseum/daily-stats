@@ -10,7 +10,7 @@ from daily_stats.db import GBIFBibliometrics, GBIFCitation, get_session
 from daily_stats.logger import get_logger
 
 
-def get_citations(config: Config):
+def get_dimensions_metrics(config: Config):
     """
     Get citations metrics from the dimensions API.
     """
@@ -61,4 +61,4 @@ def get_citations(config: Config):
 
 if __name__ == '__main__':
     conf = Config()
-    get_citations(conf)
+    get_dimensions_metrics(conf)

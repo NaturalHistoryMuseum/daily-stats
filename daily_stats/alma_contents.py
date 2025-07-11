@@ -24,7 +24,7 @@ def translate_library(row):
     return row
 
 
-def get_alma_data(config: Config):
+def get_alma_contents(config: Config):
     """
     Retrieve data from the ExLibris Alma API, summarise, and insert it into the stats
     database.
@@ -74,4 +74,4 @@ def get_alma_data(config: Config):
 
 if __name__ == '__main__':
     conf = Config()
-    get_alma_data(conf)
+    get_alma_contents(conf)

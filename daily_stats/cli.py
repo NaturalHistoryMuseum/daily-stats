@@ -4,10 +4,10 @@ import sys
 import click
 
 from daily_stats import __version__
-from daily_stats.alma_contents import get_alma_data
+from daily_stats.alma_contents import get_alma_contents
 from daily_stats.config import Config
 from daily_stats.db import get_engine, models
-from daily_stats.dimensions_metrics import get_citations
+from daily_stats.dimensions_metrics import get_dimensions_metrics
 
 
 @click.group(invoke_without_command=True)
@@ -62,7 +62,7 @@ def alma(ctx):
     """
     Get, summarise, and store data from the ExLibris Alma API.
     """
-    get_alma_data(ctx.obj['config'])
+    get_alma_contents(ctx.obj['config'])
 
 
 @cli.command()
@@ -71,7 +71,7 @@ def dimensions(ctx):
     """
     Get citations metrics from the dimensions API.
     """
-    get_citations(ctx.obj['config'])
+    get_dimensions_metrics(ctx.obj['config'])
 
 
 if __name__ == '__main__':
