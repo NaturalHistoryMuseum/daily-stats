@@ -5,6 +5,7 @@ import click
 
 from daily_stats import __version__
 from daily_stats.config import Config
+from daily_stats.db import get_engine, models
 
 
 @click.group(invoke_without_command=True)
@@ -28,3 +29,26 @@ def get_config(ctx):
     Print the current configuration.
     """
     click.echo(json.dumps(ctx.obj['config'].as_dict(), indent=2))
+
+
+@cli.command()
+@click.pass_context
+def init_db(ctx):
+    """
+    Create missing database tables.
+
+    This is for local testing only.
+    """
+    click.echo(
+        'This will create any missing tables. Useful for local testing, but NOT '
+        'recommended for production.'
+    )
+    if click.confirm('Are you sure you want to run this?', default=False):
+        click.echo('Creating tables...')
+        engine = get_engine(ctx.obj['config'])
+        for m in models:
+            click.echo(f'Creating {m.__tablename__}')
+            m.metadata.create_all(engine)
+        click.echo('Done.')
+    else:
+        click.echo('Cancelled.')
