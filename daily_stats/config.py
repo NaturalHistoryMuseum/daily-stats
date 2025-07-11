@@ -21,6 +21,8 @@ class Config:
         self.ssl_ca_path = os.environ.get('SSL_CA_PATH')
         self.ssl_key_path = os.environ.get('SSL_KEY_PATH')
         self.ssl_cert_path = os.environ.get('SSL_CERT_PATH')
+        self.log_level = os.environ.get('LOG_LEVEL', 'DEBUG')
+        self.log_dir = os.environ.get('LOG_DIR', '/var/log/daily-stats')
 
         # unset defaults if db_url is set
         if self._db_url:
