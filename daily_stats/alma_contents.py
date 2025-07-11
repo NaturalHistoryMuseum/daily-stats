@@ -4,10 +4,9 @@ import urllib.parse
 import pandas as pd
 import requests
 import xmltodict
-from sqlalchemy.orm import Session
 
 from daily_stats.config import Config
-from daily_stats.db import AlmaCsfPackageComp, get_engine
+from daily_stats.db import AlmaCsfPackageComp, get_session
 
 
 def translate_library(row):
@@ -27,8 +26,8 @@ def translate_library(row):
 
 def get_alma_data(config: Config):
     """
-    Retrieve data from the ExLibris Alma API, summarise, and insert it into the
-    stats database.
+    Retrieve data from the ExLibris Alma API, summarise, and insert it into the stats
+    database.
     """
     url = 'https://api-eu.hosted.exlibrisgroup.com/almaws/v1/analytics/reports'
     params = {
@@ -67,9 +66,7 @@ def get_alma_data(config: Config):
         .reset_index()
     )
 
-    engine = get_engine(config)
-
-    with Session(engine) as session:
+    with get_session(config) as session:
         records = [AlmaCsfPackageComp(**r) for r in df.to_dict(orient='records')]
         session.add_all(records)
         session.commit()

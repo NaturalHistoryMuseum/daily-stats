@@ -2,8 +2,8 @@
 # encoding: utf-8
 
 from .alma import AlmaCsfPackageComp
-from .engine import get_engine
+from .conn import get_engine, get_session
 
 models = [AlmaCsfPackageComp]
 
-__all__ = [get_engine, models, AlmaCsfPackageComp]
+__all__ = [get_engine, get_session, models, AlmaCsfPackageComp]
