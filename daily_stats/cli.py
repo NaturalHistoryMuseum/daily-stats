@@ -62,3 +62,7 @@ def alma(ctx):
     Get, summarise, and store data from the ExLibris Alma API.
     """
     get_alma_data(ctx.obj['config'])
+
+
+if __name__ == '__main__':
+    cli(sys.argv[1:])
