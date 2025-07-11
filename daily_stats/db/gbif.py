@@ -1,7 +1,7 @@
 # !/usr/bin/env python
 # encoding: utf-8
 
-from datetime import date as dt
+from datetime import date as dateclass
 from typing import Optional
 
 from sqlalchemy import BigInteger, String
@@ -17,7 +17,7 @@ class GBIFCitation(Base):
     abstract: Mapped[Optional[str]]
     authors: Mapped[Optional[str]]
     countries_of_researcher: Mapped[Optional[str]]
-    harvest_date: Mapped[Optional[dt]]
+    harvest_date: Mapped[Optional[dateclass]]
     doi: Mapped[Optional[str]] = mapped_column(String(55))
     language: Mapped[Optional[str]] = mapped_column(String(5))
     literature_type: Mapped[Optional[str]] = mapped_column(String(50))
@@ -27,10 +27,10 @@ class GBIFCitation(Base):
     source: Mapped[Optional[str]]
     title: Mapped[Optional[str]]
     topics: Mapped[Optional[str]] = mapped_column(String(200))
-    update_date: Mapped[Optional[dt]]
+    update_date: Mapped[Optional[dateclass]]
     year: Mapped[Optional[int]]
     month: Mapped[Optional[int]]
-    pub_date: Mapped[Optional[dt]]
+    pub_date: Mapped[Optional[dateclass]]
     total_dataset_count: Mapped[Optional[int]]
     total_record_count: Mapped[Optional[int]] = mapped_column(BigInteger)
     nhm_record_count: Mapped[Optional[int]]
@@ -44,4 +44,4 @@ class GBIFBibliometrics(Base):
     times_cited: Mapped[Optional[int]]
     field_citation_ratio: Mapped[Optional[float]]
     relative_citation_ratio: Mapped[Optional[float]]
-    harvest_date: Mapped[Optional[dt]]
+    harvest_date: Mapped[Optional[dateclass]]

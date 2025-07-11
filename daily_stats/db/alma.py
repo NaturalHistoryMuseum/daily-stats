@@ -1,7 +1,7 @@
 # !/usr/bin/env python
 # encoding: utf-8
 
-from datetime import date as dt
+from datetime import date as dateclass
 from typing import Optional
 
 from sqlalchemy.orm import Mapped, mapped_column
@@ -15,5 +15,5 @@ class AlmaCsfPackageComp(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     bib_level: Mapped[Optional[str]]
     collection: Mapped[Optional[str]]
-    date: Mapped[Optional[dt]]
+    date: Mapped[Optional[dateclass]]
     record_count: Mapped[int] = mapped_column(default=0)
