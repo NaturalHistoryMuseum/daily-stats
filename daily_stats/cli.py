@@ -24,4 +24,7 @@ def cli(ctx, version):
 @cli.command()
 @click.pass_context
 def get_config(ctx):
+    """
+    Print the current configuration.
+    """
     click.echo(json.dumps(ctx.obj['config'].as_dict(), indent=2))
