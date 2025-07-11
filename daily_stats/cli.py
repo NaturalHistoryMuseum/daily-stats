@@ -4,6 +4,7 @@ import sys
 import click
 
 from daily_stats import __version__
+from daily_stats.alma_contents import get_alma_data
 from daily_stats.config import Config
 from daily_stats.db import get_engine, models
 
@@ -52,3 +53,12 @@ def init_db(ctx):
         click.echo('Done.')
     else:
         click.echo('Cancelled.')
+
+
+@cli.command()
+@click.pass_context
+def alma(ctx):
+    """
+    Get, summarise, and store data from the ExLibris Alma API.
+    """
+    get_alma_data(ctx.obj['config'])
