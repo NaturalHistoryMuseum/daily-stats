@@ -1,4 +1,5 @@
 import json
+import sys
 
 import click
 
@@ -6,16 +7,18 @@ from daily_stats import __version__
 from daily_stats.config import Config
 
 
-@click.group()
+@click.group(invoke_without_command=True)
+@click.option('--version', is_flag=True, default=False)
 @click.pass_context
-def cli(ctx):
+def cli(ctx, version):
+    """
+    Basic CLI for easily running daily stats scripts.
+    """
+    if version or ctx.invoked_subcommand is None:
+        click.echo(__version__)
+        sys.exit(0)
     config = Config()
     ctx.obj = {'config': config}
-
-
-@cli.command()
-def version():
-    click.echo(__version__)
 
 
 @cli.command()
