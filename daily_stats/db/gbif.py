@@ -17,23 +17,23 @@ class GBIFCitation(Base):
     abstract: Mapped[Optional[str]]
     authors: Mapped[Optional[str]]
     countries_of_researcher: Mapped[Optional[str]]
-    harvest_date: Mapped[Optional[dateclass]]
     doi: Mapped[Optional[str]] = mapped_column(String(55))
+    harvest_date: Mapped[Optional[dateclass]]
     language: Mapped[Optional[str]] = mapped_column(String(5))
     literature_type: Mapped[Optional[str]] = mapped_column(String(50))
+    month: Mapped[Optional[int]]
+    nhm_record_count: Mapped[Optional[int]]
     open_access: Mapped[Optional[str]] = mapped_column(String(50))
     peer_review: Mapped[Optional[str]] = mapped_column(String(50))
+    pub_date: Mapped[Optional[dateclass]]
     publisher: Mapped[Optional[str]] = mapped_column(String(200))
     source: Mapped[Optional[str]]
     title: Mapped[Optional[str]]
     topics: Mapped[Optional[str]] = mapped_column(String(200))
-    update_date: Mapped[Optional[dateclass]]
-    year: Mapped[Optional[int]]
-    month: Mapped[Optional[int]]
-    pub_date: Mapped[Optional[dateclass]]
     total_dataset_count: Mapped[Optional[int]]
     total_record_count: Mapped[Optional[int]] = mapped_column(BigInteger)
-    nhm_record_count: Mapped[Optional[int]]
+    update_date: Mapped[Optional[dateclass]]
+    year: Mapped[Optional[int]]
 
 
 class GBIFBibliometrics(Base):
