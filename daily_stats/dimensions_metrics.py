@@ -1,13 +1,13 @@
 import datetime
 import time
 
-import requests
 from requests import HTTPError
 from sqlalchemy import distinct, func, select
 
 from daily_stats.config import Config
 from daily_stats.db import GBIFBibliometrics, GBIFCitation, get_session
 from daily_stats.logger import get_logger
+from daily_stats.utils import make_request
 
 
 def get_dimensions_metrics(config: Config):
@@ -37,7 +37,7 @@ def get_dimensions_metrics(config: Config):
         url = f'https://metrics-api.dimensions.ai/doi/{doi}'
         logger.info(f'[{ix + 1}/{total}] {url}')
         try:
-            r = requests.get(url)
+            r = make_request(url)
             r.raise_for_status()
             records.append(
                 GBIFBibliometrics(

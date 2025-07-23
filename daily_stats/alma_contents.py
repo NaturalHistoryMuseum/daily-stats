@@ -2,11 +2,11 @@ import datetime
 import urllib.parse
 
 import pandas as pd
-import requests
 import xmltodict
 
 from daily_stats.config import Config
 from daily_stats.db import AlmaCsfPackageComp, get_session
+from daily_stats.utils import make_request
 
 
 def translate_library(row):
@@ -37,7 +37,7 @@ def get_alma_contents(config: Config):
     }
 
     # Query API and flatten result
-    r = requests.get(url, params=urllib.parse.urlencode(params, safe='/'))
+    r = make_request(url, params=urllib.parse.urlencode(params, safe='/'))
     doc = xmltodict.parse(r.text)
 
     # Navigate past all the headers etc to get to the row-level data
