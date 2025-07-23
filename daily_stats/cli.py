@@ -8,6 +8,7 @@ from daily_stats.alma_contents import get_alma_contents
 from daily_stats.config import Config
 from daily_stats.db import get_engine, models
 from daily_stats.dimensions_metrics import get_dimensions_metrics
+from daily_stats.gbif_citations import get_gbif_citations
 
 
 @click.group(invoke_without_command=True)
@@ -72,6 +73,15 @@ def dimensions(ctx):
     Get citations metrics from the dimensions API.
     """
     get_dimensions_metrics(ctx.obj['config'])
+
+
+@cli.command()
+@click.pass_context
+def gbif_citations(ctx):
+    """
+    Get citation data from GBIF.
+    """
+    get_gbif_citations(ctx.obj['config'])
 
 
 if __name__ == '__main__':

@@ -1,192 +1,229 @@
-import requests
-import pymysql
-import datetime
-import gbif_dbtools as db
-import gbif_occurrences as go
 import itertools
+from datetime import datetime as dt
+
+import requests
+import sqlalchemy as sa
+
+from daily_stats.config import Config
+from daily_stats.db import GBIFBibliometrics, GBIFCitation, get_session
+from daily_stats.logger import get_logger
+from daily_stats.utils import make_request
 
 
-def get_list():
-    """
-    Get list of NHM data citations from GBIF api
-    """
+def get_gbif_citations(config: Config):
+    logger = get_logger(config, 'gbif_citations', 'gbif_citations.log')
+    session = get_session(config)
+
+    # get list of works that cited NHM specimens
     works = []
-
-    # Get list of works that cited NHM specimens
+    url = 'https://api.gbif.org/v1/literature/search'
+    params = {'gbifDataSetKey': '7e380070-f762-11e1-a439-00145eb45e9a', 'limit': 100}
     try:
         for offset in itertools.count(step=100):
-            url = f"https://api.gbif.org/v1/literature/search?gbifDataSetKey=7e380070-f762-11e1-a439-00145eb45e9a" \
-                  f"&limit=100&offset={offset}"
-            r = requests.get(url)
+            params['offset'] = offset
+            r = make_request(url, params=params)
             r.raise_for_status()
             results = r.json()['results']
 
-            # Only keep results with an id
+            # only keep results with an id
             works.extend([result for result in results if 'id' in result])
 
             if r.json()['endOfRecords']:
                 break
-
     except requests.exceptions.HTTPError as e:
-        print(e)
+        logger.error(e)
 
-    map_fields(works)
-
-
-def get_doi(record):
-    # Get DOI if available
-    if 'identifiers' in record:
-        return record['identifiers']['doi'] if 'doi' in record['identifiers'] else None
-    else:
-        return None
-
-
-def parse_author_names(record):
-    if 'authors' in record:
-        namelist = []
-        for n in record['authors']:
-            full_name = ' '.join(n.values())
-            namelist.append(full_name)
-        return '; '.join(namelist)
-    else:
-        return None
-
-
-def map_fields(works):
-    """
-    Flatten json and add default values where required
-    :param works: list of dicts each containing info about a single NHM data citation
-    """
     separator = '; '
     all_citations = {}
 
+    # flatten API result and add defaults
     for c in works:
-        citation_dict = {'update_date': datetime.datetime.strptime(c['modified'][0:10], "%Y-%m-%d").date(),
-                         'gid': c['id'],
-                         'abstract': c['abstract'].replace("\n", "") if 'abstract' in c else None,
-                         'harvest_date': c['discovered'] if 'discovered' in c else '1111-01-01',
-                         'pub_date': c['published'][0:10] if 'published' in c else '1111-01-01',
-                         'language': c['language'] if 'language' in c else None,
-                         'literature_type': c['literatureType'] if 'literatureType' in c else None,
-                         'open_access': c['openAccess'] if 'openAccess' in c else None,
-                         'peer_review': c['peerReview'] if 'peerReview' in c else None,
-                         'publisher': c['publisher'].replace("\n", "") if 'publisher' in c else None,
-                         'source': c['source'].replace("\n", "") if 'source' in c else None,
-                         'title': c['title'].replace("\n", "") if 'title' in c else None,
-                         'year': c['year'] if 'year' in c else None, 'month': c['month'] if 'month' in c else 0,
-                         'countries_of_researcher': separator.join(c['countriesOfResearcher'])
-                         if 'countriesOfResearcher' in c else None,
-                         'topics': separator.join(c['topics']) if ('topics' in c and len(c['topics']) > 0) else None,
-                         'doi': get_doi(c),
-                         'authors': parse_author_names(c),
-                         'gbif_download_count': len(c['gbifDownloadKey']) if 'gbifDownloadKey' in c else None,
-                         'nhm_record_count': None,
-                         'total_record_count': None,
-                         'total_dataset_count': None,
-                         'gbif_dk_list': c['gbifDownloadKey'] if 'gbifDownloadKey' in c else None}
+        citation_dict = {
+            # table fields
+            'id': c['id'],
+            'abstract': c.get('abstract', '').replace('\n', ''),
+            'authors': '; '.join([' '.join(n.values()) for n in c.get('authors', [])]),
+            'countries_of_researcher': separator.join(
+                c.get('countriesOfResearcher', [])
+            ),
+            'doi': c.get('identifiers', {}).get('doi'),
+            'harvest_date': dt.strptime(
+                c.get('discovered', '1111-01-01'), '%Y-%m-%d'
+            ).date(),
+            'language': c.get('language'),
+            'literature_type': c.get('literatureType'),
+            'month': c.get('month', 0),
+            'nhm_record_count': None,
+            'open_access': c.get('openAccess'),
+            'peer_review': c.get('peerReview'),
+            'pub_date': dt.strptime(
+                c.get('published', '1111-01-01')[:10], '%Y-%m-%d'
+            ).date(),
+            'publisher': c.get('publisher', '').replace('\n', ''),
+            'source': c.get('source', '').replace('\n', ''),
+            'title': c.get('title', '').replace('\n', ''),
+            'topics': separator.join(c.get('topics', [])),
+            'total_dataset_count': None,
+            'total_record_count': None,
+            'update_date': dt.strptime(c['modified'][0:10], '%Y-%m-%d').date(),
+            'year': c.get('year'),
+            # other
+            'gbif_dk_list': c.get('gbifDownloadKey'),
+        }
 
-        # Adds this citation to the overall list
+        # make these null if they're falsy (e.g. empty strings or 0)
+        for k in [
+            'abstract',
+            'authors',
+            'countries_of_researcher',
+            'publisher',
+            'source',
+            'title',
+            'topics',
+        ]:
+            if not citation_dict[k]:
+                citation_dict[k] = None
+
         all_citations[c['id']] = citation_dict
 
-    triage_citations(all_citations)
+    # identify citations to be removed, added and updated on database
+    api_citation_ids = set(all_citations.keys())
+    with session:
+        select_stmt = sa.select(GBIFCitation.id, GBIFCitation.update_date).order_by(
+            GBIFCitation.id
+        )
+        database_citations = session.execute(select_stmt).all()
+    database_citation_ids = set([c[0] for c in database_citations])
+    # anything in the db but not the API needs deleting from the db
+    citation_ids_to_delete = list(database_citation_ids - api_citation_ids)
+    # anything in the api and not the db needs adding to the db
+    citation_ids_to_add = list(api_citation_ids - database_citation_ids)
+    # anything in both needs to be checked for latest update
+    common_citation_ids = database_citation_ids & api_citation_ids
+    common_citations = filter(lambda x: x in common_citation_ids, database_citations)
 
+    # identify updated records since last run and queue for deletion and re-insertion
+    for citation_id, last_updated in common_citations:
+        api_record = all_citations[citation_id]
 
-def triage_citations(works):
-    """
-    Identify citations to be removed, added and updated on database
-    """
-    # Keys from current API call
-    api_citation_ids = set(works.keys())
-    # Keys and records on database
-    existing_citations = db.query_db("SELECT id, update_date FROM gbif_citations;").fetchall()
-    existing_citation_ids = set([c[0] for c in existing_citations])
-    # Anything in the db but not the API needs deleting from the db
-    citation_ids_to_delete = list(existing_citation_ids - api_citation_ids)
-    # Anything in the api and not the db needs adding to the db
-    citation_ids_to_add = list(api_citation_ids - existing_citation_ids)
-    # Anything in both needs to be checked for latest update
-    common_citation_ids = existing_citation_ids & api_citation_ids
+        # if api result update > database update date, append to 'add' list
+        # any duplicate keys will trigger an update
+        if api_record['update_date'] > last_updated:
+            citation_ids_to_add.append(citation_id)
 
-    # Identify updated records since last run and queue them for deletion and re-insertion
-    for x in existing_citations:
-        if x[0] in common_citation_ids:
-            # get matching result from api payload
-            api_record = works[x[0]]
-
-            # compare modified and update_date. If api result update > database update date, add to 'add' list
-            # any duplicate keys will trigger an update
-            if api_record['update_date'] > x[1]:
-                citation_ids_to_add.append(x[0])
-
-    # Get brand new + updated/to be re-added citation records from api payload
-    if citation_ids_to_add:
-        # Generate list containing new row values
-        citations_to_add = [works[p] for p in citation_ids_to_add]
-        add_citations(citations_to_add)
-
-    # Remove redacted records and records in need of updating
+    # remove outdated citations
     if citation_ids_to_delete:
-        remove_citations(citation_ids_to_delete)
+        with session:
+            delete_stmt = sa.delete(GBIFCitation).where(
+                GBIFCitation.id.in_(citation_ids_to_delete)
+            )
+            delete_result = session.execute(delete_stmt)
+            logger.info(f'Deleted {delete_result.rowcount} citations')
+
+            # check for and remove any orphan rows in the biblio table
+            # the NOT NULL is _required_ otherwise this will return nothing
+            orphan_delete_stmt = sa.delete(GBIFBibliometrics).where(
+                GBIFBibliometrics.doi.notin_(
+                    sa.select(GBIFCitation.doi)
+                    .distinct()
+                    .where(GBIFCitation.doi.isnot(None))
+                )
+            )
+            orphan_delete_result = session.execute(orphan_delete_stmt)
+            logger.info(
+                f'Deleted {orphan_delete_result.rowcount} orphaned biblio records'
+            )
+
+    # add new + updated citations
+    if citation_ids_to_add:
+        new_citation_records = []
+        total_citations_to_add = len(citation_ids_to_add)
+        for ix, cid in enumerate(citation_ids_to_add):
+            citation_dict = all_citations[cid]
+            if citation_dict['gbif_dk_list']:
+                citation_dict = _aggregate_download_stats(citation_dict, logger)
+            new_citation_records.append(GBIFCitation.strip(citation_dict))
+            logger.info(
+                f'Adding {ix + 1}/{total_citations_to_add}: {citation_dict["title"]}'
+            )
+
+        with session:
+            session.execute(sa.insert(GBIFCitation), new_citation_records)
 
 
-def remove_citations(citation_ids):
-    # Delete statement: generate and execute in a batch
-    sql = "DELETE FROM gbif_citations where id = %s"
+def _aggregate_download_stats(citation_record, logger):
+    """
+    Retrieve and reshape download data from GBIF API.
 
-    # List of ids to be deleted from gbif_citations
-    params = citation_ids
+    Uses download keys to retrieve download counts + source dataset keys for each
+    download cited in the paper.
 
-    # Trigger delete operation. Cascades to related records in gbif_occurrences and gbif_bibliometrics
-    db.update_db(sql, params)
+    :param citation_record: citation dict to be updated and returned
+    """
+    # may be multiple download keys
+    gbif_download_keys = citation_record['gbif_dk_list']
 
-    # check there's no orphaned rows left in gbf_bibliometrics: remove if any found
-    gb_sql = "select * FROM gbif_bibliometrics gb WHERE gb.doi NOT IN (SELECT gc.doi FROM gbif_citations gc);"
-    orphaned_bibliometrics = db.query_db(gb_sql).fetchall()
+    # aggregate and de-duplicate dataset references and record counts over all downloads
+    # for this citation
+    total_citation_record_count = 0
+    all_citation_datasets = set()
+    total_nhm_record_count = 0
 
-    if len(orphaned_bibliometrics) > 0:
-        bib_sql = "DELETE FROM gbif_bibliometrics where id = %s"
-        db.update_db(bib_sql, orphaned_bibliometrics)
+    # for each gbif download key, get the component dataset keys and record counts
+    for k in gbif_download_keys:
+        # base url is the same for both requests
+        download_stats_url = f'http://api.gbif.org/v1/occurrence/download/{k}'
 
+        # get overall record count for this download record
+        r = make_request(download_stats_url)
+        try:
+            r.raise_for_status()
+            total_citation_record_count += r.json().get('totalRecords', 0)
+        except Exception as e:
+            # catch everything to stop the whole thing crashing if one request fails
+            logger.error(e)
 
-def add_citations(new_citations):
-    # structures to hold row_data for insertion
-    row_data = []
-    insert_query = "INSERT INTO gbif_citations(abstract, authors, countries_of_researcher, id, harvest_date, " \
-                   "doi, language, literature_type, open_access, peer_review, publisher, source, title, " \
-                   "topics, update_date, year, month, pub_date, total_dataset_count, total_record_count, " \
-                   "nhm_record_count) VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, " \
-                   "%s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE abstract = VALUES(abstract), " \
-                   "authors = VALUES(authors), countries_of_researcher = VALUES(countries_of_researcher), " \
-                   "harvest_date = VALUES(harvest_date), doi = VALUES(doi), language = VALUES(language), " \
-                   "literature_type = VALUES(literature_type), open_access = VALUES(open_access), " \
-                   "peer_review = VALUES(peer_review), publisher = VALUES(publisher), source = VALUES(source), " \
-                   "title = VALUES(title), topics = VALUES(topics), update_date = VALUES(update_date), " \
-                   "year = VALUES(year), month = VALUES(month), pub_date = VALUES(pub_date), " \
-                   "total_dataset_count = VALUES(total_dataset_count), " \
-                   "total_record_count = VALUES(total_record_count), nhm_record_count = VALUES(nhm_record_count)"
+        # get datasets included in the download and number of NHM records, if any
+        datasets = set()
+        nhm_record_count = 0
+        download_datasets_url = download_stats_url + '/datasets'
+        params = {'limit': 500}
+        for offset in itertools.count(step=500):
+            params['offset'] = offset
+            try:
+                r = make_request(download_datasets_url, params=params)
+                r.raise_for_status()
+                dataset_results = r.json()
 
-    # Call occurrence script here: should take new_citations and return a list of the same record with total
-    # publisher count, total record count, nhm record count fields added and populated
-    for record in new_citations:
-        if record['gbif_dk_list']:
-            record = go.assemble_parts(record)
+                for d in dataset_results['results']:
+                    dataset_key = d['datasetKey']
+                    datasets.add(dataset_key)
+                    if dataset_key == '7e380070-f762-11e1-a439-00145eb45e9a':
+                        nhm_record_count += d['numberRecords']
 
-        # add/update new/amended records
-        row_data.append((record['abstract'], record['authors'], record['countries_of_researcher'], record['gid'],
-                         record['harvest_date'], record['doi'], record['language'], record['literature_type'],
-                         record['open_access'], record['peer_review'], record['publisher'], record['source'],
-                         record['title'], record['topics'], record['update_date'].strftime('%Y-%m-%d'), record['year'],
-                         record['month'], record['pub_date'], record['total_dataset_count'],
-                         record['total_record_count'], record['nhm_record_count']))
+                if (
+                    dataset_results['endOfRecords']
+                    or len(dataset_results['results']) == 0
+                ):
+                    break
+            except Exception as e:
+                # catch everything to stop the whole thing crashing if one request fails
+                logger.error(e)
 
-    #    print(record['title'])
+        # add to the current set of dataset IDs
+        all_citation_datasets |= datasets
+        # increment NHM count
+        total_nhm_record_count += nhm_record_count
 
-    try:
-        db.update_db(insert_query, row_data)
+    # update the citation record with total count of nhm records, total records cited
+    # and dataset count
+    citation_record['nhm_record_count'] = total_nhm_record_count
+    citation_record['total_record_count'] = total_citation_record_count
+    citation_record['total_dataset_count'] = len(all_citation_datasets)
 
-    except pymysql.Error as e:
-        print(e.args)
+    return citation_record
 
 
 if __name__ == '__main__':
-    get_list()
+    conf = Config()
+    get_gbif_citations(conf)
