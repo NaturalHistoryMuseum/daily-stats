@@ -2,10 +2,15 @@
 apikeys.txt
 alma-key.txt
 msq-permissions.txt
+msq-permissions-new.txt
 certs
+.env
+.env.*
 
 venv
 .venv
 logs
 .idea
 __pycache__
+*.egg-info
+uv.lock

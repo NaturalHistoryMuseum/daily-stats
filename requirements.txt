@@ -1,9 +1,0 @@
-# last version that supports python 3.8
-pandas==2.0.3
-PyMySQL==1.1.1
-requests==2.32.4
-# last version that supports python 3.8
-tweepy==4.14.0
-xmltodict==0.14.2
-# force up to date certificates to be used
-certifi==2025.6.15
