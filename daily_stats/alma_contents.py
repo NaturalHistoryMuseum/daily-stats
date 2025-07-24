@@ -5,7 +5,8 @@ import pandas as pd
 import xmltodict
 
 from daily_stats.config import Config
-from daily_stats.db import AlmaCsfPackageComp, get_session
+from daily_stats.db import AlmaCsfPackageComp, get_sessionmaker
+from daily_stats.logger import get_logger
 from daily_stats.utils import make_request
 
 
@@ -29,6 +30,9 @@ def get_alma_contents(config: Config):
     Retrieve data from the ExLibris Alma API, summarise, and insert it into the stats
     database.
     """
+    logger = get_logger(config, 'alma_contents', 'alma_contents.log')
+    sessionmaker = get_sessionmaker(config)
+
     url = 'https://api-eu.hosted.exlibrisgroup.com/almaws/v1/analytics/reports'
     params = {
         'path': '/shared/Natural History Museum UK (NHM)/Reports/JTD/ItemCount',
@@ -66,10 +70,11 @@ def get_alma_contents(config: Config):
         .reset_index()
     )
 
-    with get_session(config) as session:
+    with sessionmaker.begin() as session:
         records = [AlmaCsfPackageComp(**r) for r in df.to_dict(orient='records')]
         session.add_all(records)
-        session.commit()
+
+    logger.info(f'Added {len(df)} records.')
 
 
 if __name__ == '__main__':

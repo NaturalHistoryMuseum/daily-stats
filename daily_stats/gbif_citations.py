@@ -5,14 +5,14 @@ import requests
 import sqlalchemy as sa
 
 from daily_stats.config import Config
-from daily_stats.db import GBIFBibliometrics, GBIFCitation, get_session
+from daily_stats.db import GBIFBibliometrics, GBIFCitation, get_sessionmaker
 from daily_stats.logger import get_logger
 from daily_stats.utils import make_request
 
 
 def get_gbif_citations(config: Config):
     logger = get_logger(config, 'gbif_citations', 'gbif_citations.log')
-    session = get_session(config)
+    sessionmaker = get_sessionmaker(config)
 
     # get list of works that cited NHM specimens
     works = []
@@ -88,7 +88,7 @@ def get_gbif_citations(config: Config):
 
     # identify citations to be removed, added and updated on database
     api_citation_ids = set(all_citations.keys())
-    with session:
+    with sessionmaker.begin() as session:
         select_stmt = sa.select(GBIFCitation.id, GBIFCitation.update_date).order_by(
             GBIFCitation.id
         )
@@ -113,7 +113,7 @@ def get_gbif_citations(config: Config):
 
     # remove outdated citations
     if citation_ids_to_delete:
-        with session:
+        with sessionmaker.begin() as session:
             delete_stmt = sa.delete(GBIFCitation).where(
                 GBIFCitation.id.in_(citation_ids_to_delete)
             )
@@ -147,7 +147,7 @@ def get_gbif_citations(config: Config):
                 f'Adding {ix + 1}/{total_citations_to_add}: {citation_dict["title"]}'
             )
 
-        with session:
+        with sessionmaker.begin() as session:
             session.execute(sa.insert(GBIFCitation), new_citation_records)
 
 
