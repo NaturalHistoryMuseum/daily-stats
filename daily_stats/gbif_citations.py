@@ -33,6 +33,8 @@ def get_gbif_citations(config: Config):
     except requests.exceptions.HTTPError as e:
         logger.error(e)
 
+    logger.info(f'Found {len(works)} works')
+
     separator = '; '
     all_citations = {}
 
@@ -94,10 +96,13 @@ def get_gbif_citations(config: Config):
         )
         database_citations = session.execute(select_stmt).all()
     database_citation_ids = set([c[0] for c in database_citations])
+    logger.info(f'Found {len(database_citation_ids)} existing citations')
     # anything in the db but not the API needs deleting from the db
     citation_ids_to_delete = list(database_citation_ids - api_citation_ids)
+    logger.info(f'{len(citation_ids_to_delete)} citations to delete')
     # anything in the api and not the db needs adding to the db
     citation_ids_to_add = list(api_citation_ids - database_citation_ids)
+    logger.info(f'{len(citation_ids_to_add)} citations to add')
     # anything in both needs to be checked for latest update
     common_citation_ids = database_citation_ids & api_citation_ids
     common_citations = filter(lambda x: x in common_citation_ids, database_citations)
