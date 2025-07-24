@@ -5,6 +5,7 @@ msq-permissions.txt
 msq-permissions-new.txt
 certs
 .env
+.env.*
 
 venv
 .venv
