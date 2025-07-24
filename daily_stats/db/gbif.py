@@ -11,7 +11,7 @@ from daily_stats.db.base import Base
 
 
 class GBIFCitation(Base):
-    __tablename__ = 'gbif_citation'
+    __tablename__ = 'gbif_citations'
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
     abstract: Mapped[Optional[str]]
