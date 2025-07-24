@@ -1,8 +1,8 @@
 import itertools
 from datetime import datetime as dt
 
-import requests
 import sqlalchemy as sa
+from requests import HTTPError
 
 from daily_stats.config import Config
 from daily_stats.db import GBIFBibliometrics, GBIFCitation, get_sessionmaker
@@ -30,7 +30,7 @@ def get_gbif_citations(config: Config):
 
             if r.json()['endOfRecords']:
                 break
-    except requests.exceptions.HTTPError as e:
+    except HTTPError as e:
         logger.error(e)
 
     logger.info(f'Found {len(works)} works')
