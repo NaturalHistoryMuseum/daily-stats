@@ -5,13 +5,15 @@ import click
 import sqlalchemy as sa
 
 from daily_stats import __version__
-from daily_stats.alma_contents import get_alma_contents
 from daily_stats.config import Config
 from daily_stats.db import get_engine, get_sessionmaker, models
-from daily_stats.dimensions_metrics import get_dimensions_metrics
-from daily_stats.gbif_citations import get_gbif_citations
-from daily_stats.package_comp import get_package_comp
-from daily_stats.portal_images import get_portal_images
+from daily_stats.stats import (
+    get_alma_contents,
+    get_dimensions_metrics,
+    get_gbif_citations,
+    get_package_comp,
+    get_portal_images,
+)
 
 
 @click.group(invoke_without_command=True)
