@@ -57,6 +57,17 @@ class Config:
             ]
         )
 
+    @property
+    def ssl_args(self):
+        if self.use_ssl:
+            return {
+                'ssl_ca': self.ssl_ca_path,
+                'ssl_key': self.ssl_key_path,
+                'ssl_cert': self.ssl_cert_path,
+            }
+        else:
+            return {}
+
     def as_dict(self):
         return {
             'alma_token': self.alma_token,

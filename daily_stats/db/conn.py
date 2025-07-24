@@ -10,7 +10,7 @@ def get_engine(config):
     """
     Helper for creating a SQLAlchemy engine using the configured database settings.
     """
-    return create_engine(config.db_url)
+    return create_engine(config.db_url, connect_args=config.ssl_args)
 
 
 def get_sessionmaker(config):
