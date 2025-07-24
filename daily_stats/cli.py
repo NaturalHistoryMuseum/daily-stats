@@ -82,7 +82,7 @@ def test_conn(ctx):
 
 @cli.command()
 @click.pass_context
-def alma(ctx):
+def alma_contents(ctx):
     """
     Get, summarise, and store data from the ExLibris Alma API.
     """
@@ -91,7 +91,7 @@ def alma(ctx):
 
 @cli.command()
 @click.pass_context
-def dimensions(ctx):
+def dimensions_metrics(ctx):
     """
     Get citations metrics from the dimensions API.
     """
