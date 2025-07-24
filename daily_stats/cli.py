@@ -2,11 +2,12 @@ import json
 import sys
 
 import click
+import sqlalchemy as sa
 
 from daily_stats import __version__
 from daily_stats.alma_contents import get_alma_contents
 from daily_stats.config import Config
-from daily_stats.db import get_engine, models
+from daily_stats.db import get_engine, get_sessionmaker, models
 from daily_stats.dimensions_metrics import get_dimensions_metrics
 from daily_stats.gbif_citations import get_gbif_citations
 from daily_stats.package_comp import get_package_comp
@@ -57,6 +58,24 @@ def init_db(ctx):
         click.echo('Done.')
     else:
         click.echo('Cancelled.')
+
+
+@cli.command()
+@click.pass_context
+def test_conn(ctx):
+    """
+    Test the connection to the database by selecting the first row of each table.
+    """
+    click.echo(f'Connecting to {ctx.obj["config"].db_url}...')
+
+    sessionmaker = get_sessionmaker(ctx.obj['config'])
+    with sessionmaker.begin() as session:
+        for m in models:
+            click.echo(f'Selecting a row from {m.__tablename__}:')
+            select_stmt = sa.select(m).limit(1)
+            row = session.scalars(select_stmt).first()
+            click.echo(row)
+            click.echo()
 
 
 @cli.command()
