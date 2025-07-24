@@ -5,9 +5,11 @@ import logging
 import os
 
 
-def get_logger(config, script_name, log_file_name):
+def get_logger(config, script_name, log_file_name=None):
     if not os.path.exists(config.log_dir):
         os.mkdir(config.log_dir)
+    if log_file_name is None:
+        log_file_name = script_name + '.log'
     log_path = os.path.join(config.log_dir, log_file_name)
 
     logger = logging.getLogger(f'daily_stats.{script_name}')

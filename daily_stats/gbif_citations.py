@@ -11,7 +11,7 @@ from daily_stats.utils import make_request
 
 
 def get_gbif_citations(config: Config):
-    logger = get_logger(config, 'gbif_citations', 'gbif_citations.log')
+    logger = get_logger(config, 'gbif_citations')
     sessionmaker = get_sessionmaker(config)
 
     # get list of works that cited NHM specimens

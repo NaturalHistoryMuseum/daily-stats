@@ -14,7 +14,7 @@ def get_dimensions_metrics(config: Config):
     """
     Get citations metrics from the dimensions API.
     """
-    logger = get_logger(config, 'dimensions_metrics', 'dimensions_metrics.log')
+    logger = get_logger(config, 'dimensions_metrics')
     sessionmaker = get_sessionmaker(config)
 
     # Today's date

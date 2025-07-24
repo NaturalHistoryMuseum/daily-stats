@@ -15,7 +15,7 @@ def get_alma_contents(config: Config):
     Retrieve data from the ExLibris Alma API, summarise, and insert it into the stats
     database.
     """
-    logger = get_logger(config, 'alma_contents', 'alma_contents.log')
+    logger = get_logger(config, 'alma_contents')
     sessionmaker = get_sessionmaker(config)
 
     url = 'https://api-eu.hosted.exlibrisgroup.com/almaws/v1/analytics/reports'
