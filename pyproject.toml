@@ -1,0 +1,75 @@
+[project]
+name = "daily-stats"
+dynamic = ["version"]
+description = "Stats scripts for the data portal."
+readme = "README.md"
+requires-python = "~=3.8"
+license = { text = "GPL-3.0-or-later" }
+authors = [
+    { name = "Natural History Museum", email = "data@nhm.ac.uk" }
+]
+keywords = []
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8"
+]
+dependencies = [
+    # last version that supports python 3.8
+    "pandas==2.0.3",
+    "PyMySQL==1.1.1",
+    "requests==2.32.4",
+    "xmltodict==0.14.2",
+    # force up to date certificates to be used
+    "certifi==2025.6.15",
+    "click<8.2.0",
+    "python-dotenv>=1.0.1",
+    "sqlalchemy>=2.0.41",
+]
+
+[project.urls]
+repository = "https://github.com/NaturalHistoryMuseum/daily-stats"
+changelog = "https://github.com/NaturalHistoryMuseum/daily-stats/blob/main/CHANGELOG.md"
+
+[project.scripts]
+daily-stats = "daily_stats.cli:cli"
+
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
+[tool]
+[tool.setuptools]
+zip-safe = false
+
+[tool.setuptools.dynamic]
+version = {attr = "daily_stats.__version__"}
+
+[tool.setuptools.packages.find]
+exclude = ["tests", "docs"]
+
+[tool.commitizen]
+name = "cz_nhm"
+version = "1.3.0"
+tag_format = "v$version"
+update_changelog_on_bump = true
+changelog_incremental = true
+version_files = [
+    "daily_stats/__about__.py:version"
+]
+
+[tool.ruff]
+target-version = "py38"
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.docformatter]
+wrap-summaries = 88
+wrap-descriptions = 88
+pre-summary-newline = true
+make-summary-multi-line = true
